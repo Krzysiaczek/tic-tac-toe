@@ -37,12 +37,13 @@ class GamesController extends BaseController
                 if ($game->save()) {
                     $id = $game->id;
                 } else {
+                    // TODO: Add logs
                     abort(500, 'UPS, something went wrong! SORRY');
                 }
             }
         } else {
             $id = Game::create([
-                'board' => serialize([null, null, null, null,null, null, null, null, null]),
+                'board' => serialize([null, null, null, null, null, null, null, null, null]),
                 'player_x' => Auth::id()
             ])->id;
         }
@@ -56,13 +57,16 @@ class GamesController extends BaseController
         $this->checkPlayerBelongsToThisGame($game, true);
 
         return view('games', [
-            'user' => request()->user(),
-            'id'    => request('gameId'),
-            'board' => unserialize($game->board),
-            'playerX' => $game->playerX,
-            'playerO' => $game->playerO,
-            'nextMove' => $this->nextMove($game),
-            'yourSide' => $game->player_x === Auth::id() ? 'X' : 'O',
+            'user'       => request()->user(),
+            'id'         => request('gameId'),
+            'board'      => unserialize($game->board),
+            'playerX'    => $game->playerX,
+            'playerO'    => $game->playerO,
+            'nextMove'   => $this->nextMove($game),
+            'yourSide'   => $game->player_x === Auth::id() ? 'X' : 'O',
+            'gameStatus' => $game->status,
+            'gameResult' => $game->result,
+            'winner'     => $game->winner
         ]);
     }
 
@@ -83,16 +87,23 @@ class GamesController extends BaseController
         $this->checkIfRequestedPlaceOnBoardIsStillAvailable($board);
         $this->checkThisIsPlayerMove($game);
 
-        $this->updateGameBoard($game, $board);
+        $board = $this->updateGameBoard($game, $board);
+
+        if ($this->checkIfSideIsWinner(request('side'), $board)) {
+            $this->finishTheGame($game, Game::RESULT[2], Auth::id());
+            return redirect()->back()->with('alert', 'You won!');
+        }
 
         return back();
     }
 
-    protected function updateGameBoard($game, $board)
+    protected function updateGameBoard(Game $game, array $board): array
     {
         $board[request('board-index')] = request('side');
         $game->board = serialize($board);
         $game->update();
+
+        return $board;
     }
 
     // TODO: to investigate why this method could not sit in a Game Model?
@@ -142,12 +153,37 @@ class GamesController extends BaseController
     protected function checkThisIsPlayerMove($game)
     {
         $nextMove = ucfirst(request('side'));
-        // dd($nextMove, $game->player_x, $game->player_o, request('player-id'));
         if (
             $nextMove === 'X' && $game->player_x !== (int) request('player-id') ||
             $nextMove === 'O' && $game->player_o !== (int) request('player-id')
         ) {
             throw ValidationException::withMessages(['player-id' => 'This is not your turn!']);
         }
+    }
+
+    protected function checkIfSideIsWinner(string $side, array $board): bool
+    {
+        $winner = false;
+        $sidePositions = array_intersect($board, [$side]);
+
+        foreach (Game::WINNING_PATTERNS as $pattern) {
+            $searchPattern = array_intersect(array_keys($sidePositions), $pattern);
+
+            if (!empty($searchPattern) && count($searchPattern) >= 3) {
+                $winner = true;
+            }
+        }
+
+        return $winner;
+    }
+
+    protected function finishTheGame(Game $game, string $result, int|null $winner): void
+    {
+        $game->status = Game::STATUS[2];
+        $game->result = $result;
+        if (!empty($winner)) {
+            $game->winner = $winner;
+        }
+        $game->save();
     }
 }

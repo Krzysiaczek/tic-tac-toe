@@ -5,7 +5,7 @@
         </h2>
 
         @if (in_array($user->id, [$playerX->id, $playerO->id ?? null]))
-            <h3>You (id: {{ $user->id }}) are playing on side: {{ $yourSide }}</h3>
+            <h3>Your (id:{{ $user->id }}) side: <strong>{{ $yourSide }}</strong></h3>
         @endif
 
         @if ($yourSide == 'X')
@@ -21,13 +21,25 @@
             <h4>Opponent: {{ $playerX->name }} (id:{{ $playerX->id }})</h4>
         @endif
 
-        @if ($yourSide === $nextMove)
-            <h5 class="text-green-600">Now it's your turn!</h5>
+        @if ($gameStatus != App\Models\Game::STATUS[2])
+
+            @if ($yourSide === $nextMove)
+                <h5 class="text-green-600">Now it's your turn!</h5>
+            @else
+                <h5 class="text-red-600">Wait for opponent move!</h5>
+                @push('meta')
+                    <meta http-equiv="refresh" content="{{ App\Models\Game::REFRESH_TIME_SHORTER }}">
+                @endpush
+            @endif
+
         @else
-            <h5 class="text-red-600">Wait for opponent move!</h5>
-            @push('meta')
-                <meta http-equiv="refresh" content="{{ App\Models\Game::REFRESH_TIME_SHORTER }}">
-            @endpush
+            <h5>Game Over!</h5>
+            @if ($winner == $user->id)
+                <h6 class="text-green-500">You won!</h6>
+            @else
+                <h6 class="text-red-500">You lost!</h6>
+            @endif
+            <h6></h6>
         @endif
     </x-slot>
 
@@ -68,4 +80,11 @@
 
         </div>
     </div>
+    <script>
+        var msg = '{{Session::get('alert')}}';
+        var exist = '{{Session::has('alert')}}';
+        if(exist){
+          alert(msg);
+        }
+      </script>
 </x-app-layout>
