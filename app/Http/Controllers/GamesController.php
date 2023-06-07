@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Game;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\View\View;
-use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Routing\Controller as BaseController;
 
 class GamesController extends BaseController
 {
@@ -28,7 +30,7 @@ class GamesController extends BaseController
             'playerX' => $game->playerX,
             'playerO' => $game->playerO,
             'nextMove' => $this->nextMove($game),
-            // 'yourSide' => $game->player_x === $request->user()->id ? 'X' : 'O',
+            'yourSide' => $game->player_x === Auth::id() ? 'X' : 'O',
         ]);
     }
 
@@ -47,7 +49,7 @@ class GamesController extends BaseController
         $this->checkGameIsNotFinished($game);
         $this->checkPlayerBelongsToThisGame($game);
         $this->checkIfRequestedPlaceOnBoardIsStillAvailable($board);
-        // $this->checkThisIsPlayerMove($game);     // disabled temporarily for testing
+        $this->checkThisIsPlayerMove($game);
 
         $this->updateGameBoard($game, $board);
 
@@ -101,11 +103,12 @@ class GamesController extends BaseController
     protected function checkThisIsPlayerMove($game)
     {
         $nextMove = ucfirst(request('side'));
+        // dd($nextMove, $game->player_x, $game->player_o, request('player-id'));
         if (
-            $nextMove === 'X' && $game->player_x !== request('player-id') ||
-            $nextMove === 'O' && $game->player_o !== request('player-id')
+            $nextMove === 'X' && $game->player_x !== (int) request('player-id') ||
+            $nextMove === 'O' && $game->player_o !== (int) request('player-id')
         ) {
-            throw ValidationException::withMessages(['player-id' => 'This is not your move!']);
+            throw ValidationException::withMessages(['player-id' => 'This is not your turn!']);
         }
     }
 }

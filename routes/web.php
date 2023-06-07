@@ -1,8 +1,11 @@
 <?php
 
+use App\Models\Game;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GamesController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,7 +29,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+
+    $games = Game::where('player_x', Auth::id())->orWhere('player_o', Auth::id());
+
+    return view('dashboard', [
+        'games' => $games->get(),
+        'awaitingPlayers' => User::where('status', User::STATUS[1])->get()
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

@@ -57,7 +57,7 @@ class DatabaseSeeder extends Seeder
                         $winner = null;
                 }
 
-                dump($winner);
+                // dump($winner);
 
                 if (!empty($winner)) {
                     $result = Game::RESULT[2];  // WON
@@ -124,8 +124,7 @@ class DatabaseSeeder extends Seeder
                 $board[$i] = self::BOARD_SIGNS[rand(0, 2)];
             }
         }
-        // dump($board);
-        self::draw($board);
+        // self::draw($board);
         return $board;
     }
 

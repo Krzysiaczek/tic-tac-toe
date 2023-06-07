@@ -3,12 +3,26 @@
         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
             {{ __("Game: #$id") }}
         </h2>
+
         @if (in_array($user->id, [$playerX->id, $playerO->id]))
-            <h3>You {{ $user->id }} playing on side: {{ $yourSide }}</h3>
+            <h3>You (id: {{ $user->id }}) are playing on side: {{ $yourSide }}</h3>
         @endif
-        <h4>PlayerX: {{ $playerX->name }}; id: {{ $playerX->id }} </h4>
-        <h4>PlayerO: {{ $playerO->name }}; id: {{ $playerO->id }} </h4>
-        <h5>Next move: {{ $nextMove }}</h5>
+
+        @if ($yourSide == 'X')
+            <h4>Opponent: {{ $playerO->name }}  (id:{{ $playerO->id }})</h4>
+        @else
+            <h4>Opponent: {{ $playerX->name }}  (id:{{ $playerX->id }})</h4>
+        @endif
+
+        @if ($yourSide === $nextMove)
+            <h5 class="text-green-600">Now it's your turn!</h5>
+        @else
+            <h5 class="text-red-600">Wait for opponent move!</h5>
+            @push('meta')
+                <meta http-equiv="refresh" content="2">
+            @endpush
+        @endif
+        {{-- <h5>Next move: {{ $nextMove }}</h5> --}}
     </x-slot>
 
     <div class="py-12">
@@ -25,13 +39,13 @@
                                     @csrf
                                     <input type="hidden" name="side" value="{{ $nextMove }}" />
                                     <input type="hidden" name="board-index" value="{{ $key }}" />
-                                    {{-- <input type="hidden" name="player-id" value="{{ $user->id }}" /> --}}
-                                    @if ($nextMove === 'X')
+                                    <input type="hidden" name="player-id" value="{{ $user->id }}" />
+                                    {{-- @if ($nextMove === 'X')
                                     <input type="hidden" name="player-id" value="{{ $playerX->id }}" />
                                     @else
                                     <input type="hidden" name="player-id" value="{{ $playerO->id }}" />
-                                    @endif
-                                    <input type="submit" value=".">
+                                    @endif --}}
+                                    <input type="submit" value="." class="">
 
                                 </form>
                                 @endif
