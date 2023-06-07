@@ -12,22 +12,27 @@
                     {{ __("You're logged in!") }}
                 </div>
                 @if ($games->count() > 0)
-                <ul class="p-9">
-                    @foreach ($games as $game)
-                      <li><a href="/games/{{ $game->id }}">game #{{ $game->id }}, {{ $game->status }}, last move at {{ $game->updated_at }}</a></li>
-                    @endforeach
-                </ul>
-                @elseif (count($awaitingPlayers) > 1)
-                    <h5 class="text-green-600 mx-5">There are {{ count($awaitingPlayers) - 1 }} players awaiting!</h5>
-                    <button class="rounded-full w-fit bg-green-400 px-3 py-2 m-5 font-bold">Start new game</button>
-                    @push('meta')
-                        <meta http-equiv="refresh" content="5">
-                    @endpush
+                    <ul class="p-9">
+                        @foreach ($games as $game)
+                            <li>
+                                <a href="/games/{{ $game->id }}" class="underline underline-offset-2 text-blue-600">game #{{ $game->id }}</a>
+                                {{ $game->status }}, last move {{ $game->updated_at->diffForHumans() }}
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+                @push('meta')
+                    <meta http-equiv="refresh" content="{{ App\Models\Game::REFRESH_TIME_LONGER }}">
+                @endpush
+                @if (count($awaitingPlayers) > 1)
+                    <h5 class="text-green-600 ml-8">There are {{ count($awaitingPlayers) - 1 }} players online awaiting!
+                    </h5>
+                    <form method="POST" action="/games/create">
+                        @csrf
+                        <button class="rounded-full w-fit bg-blue-600 text-white px-3 py-2 m-5 font-bold">Start new game</button>
+                    </form>
                 @else
                     <h5 class="text-red-600 m-6 font-bold">There are no opponents online, please wait!</h5>
-                    @push('meta')
-                        <meta http-equiv="refresh" content="5">
-                    @endpush
                 @endif
             </div>
         </div>

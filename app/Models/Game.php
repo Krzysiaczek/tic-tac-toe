@@ -27,6 +27,9 @@ class Game extends Model
         [2, 4, 6]
     ];
 
+    public const REFRESH_TIME_LONGER = 5;
+    public const REFRESH_TIME_SHORTER = 2;
+
     public function players()
     {
         return [

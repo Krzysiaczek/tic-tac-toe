@@ -3,25 +3,57 @@
 namespace App\Http\Controllers;
 
 use App\Models\Game;
-use App\Models\User;
 use Illuminate\View\View;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Routing\Controller as BaseController;
 
 class GamesController extends BaseController
 {
-    // use AuthorizesRequests, ValidatesRequests;
-
-    public function index(Request $request)
+    public function index()
     {
         return view('dashboard');
+    }
+
+    public function create()
+    {
+        $game = Game::where('status', 'awaiting')
+            ->whereNull('player_o')
+            ->whereNotNull('player_x')
+            // ->whereNot('player_x', Auth::id())
+            ->orderBy('created_at', 'DESC')
+            ->first();
+
+        // there is already a game to join
+        if (!empty($game->id)) {
+            // check if this is current user created that game
+            if ($game->player_x == Auth::id()) {
+                // not much to do
+                $id = $game->id;
+            } else {
+                // add user to another one awaiting to start
+                $game->player_o = Auth::id();
+                $game->status = Game::STATUS[1];
+                if ($game->save()) {
+                    $id = $game->id;
+                } else {
+                    abort(500, 'UPS, something went wrong! SORRY');
+                }
+            }
+        } else {
+            $id = Game::create([
+                'board' => serialize([null, null, null, null,null, null, null, null, null]),
+                'player_x' => Auth::id()
+            ])->id;
+        }
+        return to_route('games.show', ['gameId' => $id]);
     }
 
     public function show(): View
     {
         $game =  Game::findOrFail(request('gameId'));
+
+        $this->checkPlayerBelongsToThisGame($game, true);
 
         return view('games', [
             'user' => request()->user(),
@@ -36,7 +68,6 @@ class GamesController extends BaseController
 
     public function move()
     {
-        //TODO Figure out how to add custom validations
         request()->validate([
             'player-id'    => 'required|integer',
             'board-index'  => 'required|integer',
@@ -46,6 +77,7 @@ class GamesController extends BaseController
         $game = Game::findOrFail(request('gameId'));
         $board = unserialize($game->board);
 
+        //TODO Figure out a better way for custom validations
         $this->checkGameIsNotFinished($game);
         $this->checkPlayerBelongsToThisGame($game);
         $this->checkIfRequestedPlaceOnBoardIsStillAvailable($board);
@@ -78,7 +110,7 @@ class GamesController extends BaseController
         return $count % 2 === 0 ? 'X' : 'O';
     }
 
-    // TODO: Those methods should be moved to some custom Validation class
+    // TODO: Those methods should be moved to some custom Validation class, I guess
     protected function checkIfRequestedPlaceOnBoardIsStillAvailable($board)
     {
         if (!empty($board[request('board-index')])) {
@@ -93,10 +125,17 @@ class GamesController extends BaseController
         }
     }
 
-    protected function checkPlayerBelongsToThisGame($game)
+    protected function checkPlayerBelongsToThisGame($game, $throwHttpException = false)
     {
-        if (!in_array(request('player-id'), [$game->player_x, $game->player_o])) {
-            throw ValidationException::withMessages(['player-id' => 'This is not your game!']);
+        if (!in_array(Auth::id(), [$game->player_x, $game->player_o])) {
+            $message = 'This is not your game!';
+            if ($throwHttpException) {
+                // 403 maybe would be more appropriate for the context
+                // but would uncover the entry point for attackers
+                abort(404, $message);
+            } else {
+                throw ValidationException::withMessages(['player-id' => $message]);
+            }
         }
     }
 
