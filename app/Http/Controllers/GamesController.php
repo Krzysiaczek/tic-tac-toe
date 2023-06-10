@@ -17,7 +17,7 @@ class GamesController extends BaseController
 
     public function create()
     {
-        $game = Game::where('status', 'awaiting')
+        $game = Game::where('status', Game::STATUS_AWAITING)
             ->whereNull('player_o')
             ->whereNotNull('player_x')
             // ->whereNot('player_x', Auth::id())
@@ -33,7 +33,7 @@ class GamesController extends BaseController
             } else {
                 // add user to another one awaiting to start
                 $game->player_o = Auth::id();
-                $game->status = Game::STATUS[1];
+                $game->status = Game::STATUS_IN_PROGRESS;
                 if ($game->save()) {
                     $id = $game->id;
                 } else {
@@ -62,11 +62,11 @@ class GamesController extends BaseController
             'board'      => unserialize($game->board),
             'playerX'    => $game->playerX,
             'playerO'    => $game->playerO,
-            'nextMove'   => $this->nextMove($game),
-            'yourSide'   => $game->player_x === Auth::id() ? 'X' : 'O',
+            'nextMove'   => $this->nextMove($game), // which side is next move X or O
+            'yourSide'   => $game->player_x === Auth::id() ? Game::SIDE_X : Game::SIDE_O, // player's side X or O
             'gameStatus' => $game->status,
             'gameResult' => $game->result,
-            'winner'     => $game->winner
+            'winner'     => $game->winner,
         ]);
     }
 
@@ -90,8 +90,10 @@ class GamesController extends BaseController
         $board = $this->updateGameBoard($game, $board);
 
         if ($this->checkIfSideIsWinner(request('side'), $board)) {
-            $this->finishTheGame($game, Game::RESULT[2], Auth::id());
-            return redirect()->back()->with('alert', 'You won!');
+            $this->finishTheGame($game, Game::RESULT_WON, Auth::id());
+            // return redirect()->back()->with('alert', 'You won!');
+        } elseif ($this->checkResultIsDraw($board)) {
+            $this->finishTheGame($game, Game::RESULT_DRAW);
         }
 
         return back();
@@ -118,7 +120,7 @@ class GamesController extends BaseController
             }
         }
 
-        return $count % 2 === 0 ? 'X' : 'O';
+        return $count % 2 === 0 ? Game::SIDE_X : Game::SIDE_O;
     }
 
     // TODO: Those methods should be moved to some custom Validation class, I guess
@@ -131,8 +133,8 @@ class GamesController extends BaseController
 
     protected function checkGameIsNotFinished($game)
     {
-        if ($game->status !== Game::STATUS[1]) {
-            throw ValidationException::withMessages(['status' => 'Game is not ' . Game::STATUS[1] . '!']);
+        if ($game->status !== Game::STATUS_IN_PROGRESS) {
+            throw ValidationException::withMessages(['status' => 'Game is not in progress!']);
         }
     }
 
@@ -154,8 +156,8 @@ class GamesController extends BaseController
     {
         $nextMove = ucfirst(request('side'));
         if (
-            $nextMove === 'X' && $game->player_x !== (int) request('player-id') ||
-            $nextMove === 'O' && $game->player_o !== (int) request('player-id')
+            $nextMove === Game::SIDE_X && $game->player_x !== (int) request('player-id') ||
+            $nextMove === Game::SIDE_O && $game->player_o !== (int) request('player-id')
         ) {
             throw ValidationException::withMessages(['player-id' => 'This is not your turn!']);
         }
@@ -164,11 +166,16 @@ class GamesController extends BaseController
     protected function checkIfSideIsWinner(string $side, array $board): bool
     {
         $winner = false;
+        if ($this->countSide($board, $side) < 3) {
+            return $winner;
+        }
         $sidePositions = array_intersect($board, [$side]);
 
+        // search for winning pattern
         foreach (Game::WINNING_PATTERNS as $pattern) {
             $searchPattern = array_intersect(array_keys($sidePositions), $pattern);
 
+            // declare winner only if the pattern is covered in full => 3 moves
             if (!empty($searchPattern) && count($searchPattern) >= 3) {
                 $winner = true;
             }
@@ -177,13 +184,29 @@ class GamesController extends BaseController
         return $winner;
     }
 
-    protected function finishTheGame(Game $game, string $result, int|null $winner): void
+    protected function finishTheGame(Game $game, string $result, int|null $winner = null): void
     {
-        $game->status = Game::STATUS[2];
+        $game->status = Game::STATUS_FINISHED;
         $game->result = $result;
         if (!empty($winner)) {
             $game->winner = $winner;
         }
         $game->save();
+    }
+
+    protected function countSide(array $board, string $side = ''): int
+    {
+        //count total number of moves
+        if (empty($side)) {
+            return count(array_intersect($board, [Game::SIDE_X, Game::SIDE_O]));
+        }
+
+        //count only moves by given side
+        return count(array_intersect($board, [$side]));
+    }
+
+    protected function checkResultIsDraw(array $board): bool
+    {
+        return $this->countSide($board) === 9;
     }
 }

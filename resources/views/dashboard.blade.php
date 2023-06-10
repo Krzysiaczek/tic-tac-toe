@@ -15,8 +15,21 @@
                     <ul class="p-9">
                         @foreach ($games as $game)
                             <li>
-                                <a href="/games/{{ $game->id }}" class="underline underline-offset-2 text-blue-600">game #{{ $game->id }}</a>
-                                {{ $game->status }}, last move {{ $game->updated_at->diffForHumans() }}
+                                <a href="/games/{{ $game->id }}"
+                                   class="underline underline-offset-2 text-blue-600">game #{{ $game->id }}</a>
+                                {{ $game->status }},
+                                @if ($game->status == App\Models\Game::STATUS_FINISHED &&
+                                    $game->result == App\Models\Game::RESULT_WON
+                                )
+                                    @if ($game->winner == Auth::id())
+                                        <span class="text-green-500">you won</span>,
+                                    @else
+                                        <span class="text-red-500">you lost</span>,
+                                    @endif
+                                @elseif($game->status == App\Models\Game::STATUS_FINISHED)
+                                    <span class="text-orange-500">draw</span>,
+                                @endif
+                                last move {{ $game->updated_at->diffForHumans() }}
                             </li>
                         @endforeach
                     </ul>
@@ -29,7 +42,8 @@
                     </h5>
                     <form method="POST" action="/games/create">
                         @csrf
-                        <button class="rounded-full w-fit bg-blue-600 text-white px-3 py-2 m-5 font-bold">Start new game</button>
+                        <button class="rounded-full w-fit bg-blue-600 text-white px-3 py-2 m-5 font-bold">Start new
+                            game</button>
                     </form>
                 @else
                     <h5 class="text-red-600 m-6 font-bold">There are no opponents online, please wait!</h5>

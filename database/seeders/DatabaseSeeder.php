@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
     protected const USERS_AMOUNT = 15;
     protected const GAMES_AMOUNT = 15;
 
-    protected const BOARD_SIGNS = [null, 'X', 'O'];
+    protected const BOARD_SIGNS = [null, Game::SIDE_X, Game::SIDE_O];
 
     protected static string|null $gameResult;
 
@@ -24,12 +24,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $inactivePlayers = self::generatePlayers('away');
-        $activePlayers = self::generatePlayers('playing');
-        self::generatePlayers('awaiting');
+        $inactivePlayers = self::generatePlayers(User::STATUS_AWAY);
+        $activePlayers = self::generatePlayers(User::STATUS_PLAYING);
+        self::generatePlayers(User::STATUS_WAITING);
 
-        self::generateGames('in progress', $activePlayers);
-        self::generateGames('finished', $inactivePlayers);
+        self::generateGames(Game::STATUS_IN_PROGRESS, $activePlayers);
+        self::generateGames(Game::STATUS_FINISHED, $inactivePlayers);
 
         // TODO do we need to identify abandoned games ??? game: in progress + user: away ???
         // or check last update time
@@ -45,12 +45,12 @@ class DatabaseSeeder extends Seeder
             $winner = null;
             $pairOfPlayers = self::getTwoRandomPlayersFrom($players);
 
-            if ($status === 'finished') {
+            if ($status === Game::STATUS_FINISHED) {
                 switch (self::pickWinningSideOrDraw()) {
-                    case 'X':
+                    case Game::SIDE_X:
                         $winner = $pairOfPlayers[0];
                         break;
-                    case 'Y':
+                    case Game::SIDE_O:
                         $winner = $pairOfPlayers[1];
                         break;
                     default:
@@ -72,7 +72,7 @@ class DatabaseSeeder extends Seeder
                 'player_x'  => $pairOfPlayers[0],
                 'player_o'  => $pairOfPlayers[1],
                 'status'    => $status,
-                'board'     => serialize(self::generateRandomBoard($status === 'finished')),
+                'board'     => serialize(self::generateRandomBoard($status === Game::STATUS_FINISHED)),
                 'winner'    => $winner,
                 'result'    => $result
             ]);

@@ -12,9 +12,29 @@ class Game extends Model
     // protected $fillable = [];
     protected $guarded = ['id', 'created_at', 'updated_at'];
 
-    public const STATUS = ['awaiting', 'in progress', 'finished'];
 
-    public const RESULT = [null, 'draw', 'won'];
+    public const SIDE_X = 'X';
+    public const SIDE_O = 'O';
+
+    public const STATUS_AWAITING = 'awaiting';
+    public const STATUS_IN_PROGRESS = 'in progress';
+    public const STATUS_FINISHED = 'finished';
+
+    public const STATUS = [
+        self::STATUS_AWAITING,
+        self::STATUS_IN_PROGRESS,
+        self::STATUS_FINISHED
+    ];
+
+    public const RESULT_UNKNOWN = null;
+    public const RESULT_DRAW = 'draw';
+    public const RESULT_WON = 'won';
+
+    public const RESULT = [
+        self::RESULT_UNKNOWN,
+        self::RESULT_DRAW,
+        self::RESULT_WON
+    ];
 
     public const WINNING_PATTERNS = [
         [0, 1, 2], // rows

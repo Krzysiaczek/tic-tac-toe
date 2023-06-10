@@ -44,5 +44,9 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    public const STATUS = ['away', 'awaiting', 'playing'];
+    public const STATUS_AWAY = 'away';
+    public const STATUS_WAITING = 'awaiting';
+    public const STATUS_PLAYING = 'playing';
+    public const STATUS = [
+        self::STATUS_AWAY, self::STATUS_WAITING, self::STATUS_PLAYING];
 }
