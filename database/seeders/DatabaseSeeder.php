@@ -30,9 +30,6 @@ class DatabaseSeeder extends Seeder
 
         self::generateGames(Game::STATUS_IN_PROGRESS, $activePlayers);
         self::generateGames(Game::STATUS_FINISHED, $inactivePlayers);
-
-        // TODO do we need to identify abandoned games ??? game: in progress + user: away ???
-        // or check last update time
     }
 
     protected static function generateGames(string $status, array &$players, int $number = self::GAMES_AMOUNT): void
@@ -57,15 +54,13 @@ class DatabaseSeeder extends Seeder
                         $winner = null;
                 }
 
-                // dump($winner);
-
                 if (!empty($winner)) {
-                    $result = Game::RESULT[2];  // WON
+                    $result = Game::RESULT_WON;
                 } else {
-                    $result = Game::RESULT[1];  // DRAW
+                    $result = Game::RESULT_DRAW;
                 }
             } else {
-                $result = Game::RESULT[0];      // UNKOWN
+                $result = Game::RESULT_UNKNOWN;
             }
 
             Game::factory()->create([
@@ -99,8 +94,6 @@ class DatabaseSeeder extends Seeder
     protected static function getTwoRandomPlayersFrom(&$players): array
     {
         $pairOfPlayers = array_rand($players, 2);
-        //TODO check if the game is in running stage that there is only one for the given pair
-        // or maybe this could happen if the abandoned the game and start another?
 
         return [
             $players[$pairOfPlayers[0]]['id'],
@@ -124,7 +117,7 @@ class DatabaseSeeder extends Seeder
                 $board[$i] = self::BOARD_SIGNS[rand(0, 2)];
             }
         }
-        // self::draw($board);
+
         return $board;
     }
 

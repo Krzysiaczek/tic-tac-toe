@@ -24,7 +24,6 @@ Route::get('/', function () {
 
 // TODO: add '/games' prefix/group
 Route::middleware(['auth', 'verified'])->prefix('games')->group(function () {
-    // Route::get('/games', [GamesController::class, 'index'])->name('games.index');
     Route::post('/create', [GamesController::class, 'create'])->name('games.index');
     Route::get('/{gameId}', [GamesController::class, 'show'])->whereNumber('gameId')->name('games.show');
     Route::post('/{gameId}/move', [GamesController::class, 'move'])->whereNumber('gameId')->name('games.move');
@@ -36,9 +35,15 @@ Route::get('/dashboard', function () {
 
     return view('dashboard', [
         'games' => $games->get(),
-        'awaitingPlayers' => User::where('status', User::STATUS[1])
-            // ->andWhere('update_at', 'timediff') // TODO: add timediff condition from last activity
-            ->get()
+        'awaitingPlayers' => count(
+            User::where('status', User::STATUS_WAITING)
+                ->whereRaw('FLOOR((UNIX_TIMESTAMP(now()) - UNIX_TIMESTAMP(updated_at)) / 60) < 15')
+                ->get()
+        ) + count(
+            Game::where('status', Game::STATUS_AWAITING)
+                ->where('player_o', null)
+                ->get()
+        )
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

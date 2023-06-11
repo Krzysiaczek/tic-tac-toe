@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Game;
+use App\Models\User;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Routing\Controller as BaseController;
@@ -20,32 +23,20 @@ class GamesController extends BaseController
         $game = Game::where('status', Game::STATUS_AWAITING)
             ->whereNull('player_o')
             ->whereNotNull('player_x')
-            // ->whereNot('player_x', Auth::id())
             ->orderBy('created_at', 'DESC')
             ->first();
 
-        // there is already a game to join
+        // check if there is already a game to join
         if (!empty($game->id)) {
-            // check if this is current user created that game
+            // check if this current user created that game
             if ($game->player_x == Auth::id()) {
                 // not much to do
                 $id = $game->id;
             } else {
-                // add user to another one awaiting to start
-                $game->player_o = Auth::id();
-                $game->status = Game::STATUS_IN_PROGRESS;
-                if ($game->save()) {
-                    $id = $game->id;
-                } else {
-                    // TODO: Add logs
-                    abort(500, 'UPS, something went wrong! SORRY');
-                }
+                $id = $this->addPlayerOToExistingGame($game);
             }
         } else {
-            $id = Game::create([
-                'board' => serialize([null, null, null, null, null, null, null, null, null]),
-                'player_x' => Auth::id()
-            ])->id;
+            $id = $this->createNewGameWithPlayerX();
         }
         return to_route('games.show', ['gameId' => $id]);
     }
@@ -84,15 +75,15 @@ class GamesController extends BaseController
         //TODO Figure out a better way for custom validations
         $this->checkGameIsNotFinished($game);
         $this->checkPlayerBelongsToThisGame($game);
-        $this->checkIfRequestedPlaceOnBoardIsStillAvailable($board);
-        $this->checkThisIsPlayerMove($game);
+        $this->checkIfRequestedPlaceIsStillAvailable($board);
+        $this->checkIfThisIsYourTurn($game);
 
         $board = $this->updateGameBoard($game, $board);
 
         if ($this->checkIfSideIsWinner(request('side'), $board)) {
             $this->finishTheGame($game, Game::RESULT_WON, Auth::id());
             // return redirect()->back()->with('alert', 'You won!');
-        } elseif ($this->checkResultIsDraw($board)) {
+        } elseif ($this->checkIfResultIsDraw($board)) {
             $this->finishTheGame($game, Game::RESULT_DRAW);
         }
 
@@ -124,7 +115,7 @@ class GamesController extends BaseController
     }
 
     // TODO: Those methods should be moved to some custom Validation class, I guess
-    protected function checkIfRequestedPlaceOnBoardIsStillAvailable($board)
+    protected function checkIfRequestedPlaceIsStillAvailable($board)
     {
         if (!empty($board[request('board-index')])) {
             throw ValidationException::withMessages(['board-index' => 'Invalid move!']);
@@ -152,7 +143,7 @@ class GamesController extends BaseController
         }
     }
 
-    protected function checkThisIsPlayerMove($game)
+    protected function checkIfThisIsYourTurn($game)
     {
         $nextMove = ucfirst(request('side'));
         if (
@@ -186,12 +177,25 @@ class GamesController extends BaseController
 
     protected function finishTheGame(Game $game, string $result, int|null $winner = null): void
     {
+        DB::beginTransaction();
+
         $game->status = Game::STATUS_FINISHED;
         $game->result = $result;
         if (!empty($winner)) {
             $game->winner = $winner;
         }
-        $game->save();
+        $playerX = User::find($game->player_x);
+        $playerX->status = User::STATUS_WAITING;
+
+        $playerO = User::find($game->player_o);
+        $playerO->status = User::STATUS_WAITING;
+        if (!$game->save() || !$playerX->save() || !$playerO->save()) {
+            DB::rollBack();
+            abort(500, 'UPS, something went wrong! SORRY');
+            Log::error("Couldn't finish the game: " . $game->id);
+        }
+
+        DB::commit();
     }
 
     protected function countSide(array $board, string $side = ''): int
@@ -205,8 +209,53 @@ class GamesController extends BaseController
         return count(array_intersect($board, [$side]));
     }
 
-    protected function checkResultIsDraw(array $board): bool
+    protected function checkIfResultIsDraw(array $board): bool
     {
         return $this->countSide($board) === 9;
+    }
+
+    protected function createNewGameWithPlayerX(): int|null
+    {
+        DB::beginTransaction();
+
+        $id = Game::create([
+            'board' => serialize([null, null, null, null, null, null, null, null, null]),
+            'player_x' => Auth::id()
+        ])->id;
+
+        $playerX = User::find(Auth::id());
+        $playerX->status = User::STATUS_PLAYING;
+
+        if (!$playerX->save() || empty($id)) {
+            DB::rollBack();
+            abort(500, 'UPS, something went wrong! SORRY');
+            Log::error("Couldn't create a new game for player: " . Auth::id());
+        }
+
+        DB::commit();
+
+        return $id;
+    }
+
+    protected function addPlayerOToExistingGame(Game $game): int|null
+    {
+        // add user to another one awaiting to start the game
+        DB::beginTransaction();
+
+        $game->player_o = Auth::id();
+        $game->status = Game::STATUS_IN_PROGRESS;
+
+        $playerO = User::find(Auth::id());
+        $playerO->status = User::STATUS_PLAYING;
+
+        if (!$game->save() || !$playerO->save()) {
+            DB::rollBack();
+            abort(500, 'UPS, something went wrong! SORRY');
+            Log::error("Couldn't add player: " . Auth::id() . " to exiting game: " . $game->id);
+        }
+
+        DB::commit();
+
+        return $game->id;
     }
 }

@@ -47,6 +47,9 @@ class User extends Authenticatable
     public const STATUS_AWAY = 'away';
     public const STATUS_WAITING = 'awaiting';
     public const STATUS_PLAYING = 'playing';
+
     public const STATUS = [
-        self::STATUS_AWAY, self::STATUS_WAITING, self::STATUS_PLAYING];
+        self::STATUS_AWAY,
+        self::STATUS_WAITING,
+        self::STATUS_PLAYING];
 }

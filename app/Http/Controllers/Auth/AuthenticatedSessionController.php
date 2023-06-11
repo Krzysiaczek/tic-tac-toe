@@ -31,7 +31,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $user = User::find(Auth::id());
-        $user->status = User::STATUS[1];
+        $user->status = User::STATUS_WAITING;
         $user->update();
 
         return redirect()->intended(RouteServiceProvider::HOME);
@@ -43,7 +43,7 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         $user = User::find(Auth::id());
-        $user->status = User::STATUS[0];
+        $user->status = User::STATUS_AWAY;
         $user->update();
 
         Auth::guard('web')->logout();

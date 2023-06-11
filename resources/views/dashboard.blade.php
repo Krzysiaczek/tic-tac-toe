@@ -37,13 +37,14 @@
                 @push('meta')
                     <meta http-equiv="refresh" content="{{ App\Models\Game::REFRESH_TIME_LONGER }}">
                 @endpush
-                @if (count($awaitingPlayers) > 1)
-                    <h5 class="text-green-600 ml-8">There are {{ count($awaitingPlayers) - 1 }} players online awaiting!
-                    </h5>
+                @if ($awaitingPlayers > 1)
+                    <h5 class="text-green-600 ml-8">Number of players waiting online: {{ $awaitingPlayers - 1 }}</h5>
                     <form method="POST" action="/games/create">
                         @csrf
-                        <button class="rounded-full w-fit bg-blue-600 text-white px-3 py-2 m-5 font-bold">Start new
-                            game</button>
+
+                        <x-primary-button class="my-5 ml-8">
+                            Start a new game
+                        </x-primary-button>
                     </form>
                 @else
                     <h5 class="text-red-600 m-6 font-bold">There are no opponents online, please wait!</h5>
