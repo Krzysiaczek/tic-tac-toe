@@ -1,5 +1,5 @@
-# tic-tac-toe
-This is a mulitplayer tic-tac-toe game build in Laravel 10.13 and PHP 8.2.
+# Tic, tac, toe
+This is a mulitplayer tic, tac, toe game build in Laravel 10 and PHP 8.
 
 ## Installation
 
@@ -8,15 +8,16 @@ Clone repository to chosen folder
 $ git clone git@github.com:Krzysiaczek/tic-tac-toe.git
 ```
 
-This should create a folder called `tic-tac-toe` in your previousl chosen directory.
+This should create a folder called `tic-tac-toe` in your chosen directory.
 
-Go insed that folder and run composer install.
+Go inside that folder and run composer install.
 
 ```
 $ cd tic-tac-toe
 $ composer install
 ```
-Generate the key
+
+Generate the security key
 ```
 $ php artisan key:generate
 ```
@@ -26,6 +27,7 @@ Copy `.env.example` to `.env` and edit the content - especcially DB settings
 $ cp .env.example .env
 $ vim .env 
 ```
+
 Initiate database
 ```
 $ php artisan migrate
@@ -44,4 +46,4 @@ $ php artisan serve
 The site should be available in the browser `http://localhost:8000`. Even port number could be slightly diffferent, if you've got something already running.
 
 ### Demo
-Demosntration site is available at http://138.68.77.32
+Demo site is available at http://138.68.77.32
